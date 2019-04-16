@@ -1,0 +1,128 @@
+void Reading_object();
+
+//Servomotorn
+#include <Servo.h>
+int angle;
+Servo servo;
+
+//Avståndsläsaren
+const unsigned int TRIG_PIN=7;
+const unsigned int ECHO_PIN=6;
+
+//Hjulen, XHY = Höger/Vänster Hjul Fram/Bak
+const unsigned int HHF = 4, HHB = 5, VHF = 3, VHB = 2;
+
+//Vilken sida som är närmst väggen
+int vinkel[170];
+int hsida, vsida;
+
+
+void setup() {
+  //Hjulen
+  pinMode(HHF, OUTPUT);
+  pinMode(HHB, OUTPUT);
+  pinMode(VHF, OUTPUT);
+  pinMode(VHB, OUTPUT);
+
+  //Avståndsläsaren
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  //Servomotorn
+  servo.attach(8);
+  servo.write(angle);
+
+  //Läsrutan
+  Serial.begin(9600);
+  Serial.println("Ready");
+}
+
+
+
+void loop() { 
+  servo.write(90); //Sätter servomotorn till 90 grader
+  delay(30);
+
+  //Läser av omgivningen framför den
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  
+  const unsigned long duration= pulseIn(ECHO_PIN, HIGH);
+  delay(15);
+  
+  if(duration < 350) {
+    Reading_object();
+  }
+}
+
+
+
+void Reading_object(){
+  digitalWrite(HHB, LOW);
+  digitalWrite(VHB, LOW);
+  digitalWrite(HHF, LOW);
+  digitalWrite(VHF, LOW);
+
+  //Styr från 0-180 med avläsning, från int angle 10-95 avläsning vänster sida, från int angle 96-180 avläsning höger sida
+    for(angle = 10; angle < 180; angle++)  
+  {  
+    if(angle == 10 || angle == 60 || angle == 110 || angle == 160 || angle == 170){                                
+    servo.write(angle);                
+    }
+
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+
+    const unsigned long duration= pulseIn(ECHO_PIN, HIGH);
+    delay(15); 
+    vinkel[angle] = duration;                   
+  } 
+  
+  //Styr tillbaks från 180 till 0 grader utan avläsning
+  for(angle = 180; angle > 10; angle = angle - 20)    
+  {                                
+    servo.write(angle);           
+    delay(15);       
+  }
+
+  //Adderar ihop hela vänster sida 
+  for(int t = 0; t <= 85; t++){
+    vsida = vinkel[t] + vsida;
+    }
+
+  //Adderar ihop hela höger sida
+  for(int t = 85; t < 170; t++){
+    hsida = vinkel[t] + hsida;
+    }
+    
+
+  //Om höger sida är större än vänster sida 
+  if(hsida > vsida){
+    digitalWrite(HHB, HIGH);
+    digitalWrite(VHB, HIGH);
+    delay(500);
+    digitalWrite(HHB, LOW);
+    digitalWrite(VHB, LOW);
+    digitalWrite(VHF, HIGH);
+    delay(800);
+    digitalWrite(HHF, HIGH);
+    }
+
+  //Om vänster sida är större än högersida
+    else{
+    digitalWrite(HHB, HIGH);
+    digitalWrite(VHB, HIGH);
+    delay(500);
+    digitalWrite(HHB, LOW);
+    digitalWrite(VHB, LOW);
+    digitalWrite(HHF, HIGH);
+    delay(800);
+    digitalWrite(VHF, HIGH);
+    }
+  }
